@@ -80,14 +80,16 @@ int System2User(int virtAddr, int len, char* buffer)
 	} while (i < len && oneChar != 0);
 	return i;
 }
-void increasePC(){
-    int pcAfter = machine->ReadRegister(PCReg) + 4;
-    machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
-    machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
-    machine->WriteRegister(NextPCReg, pcAfter);
+// Doi thanh ghi Program counter cua he thong ve sau 4 byte de tiep tuc nap lenh
+void IncreasePC()
+{
+	int counter = machine->ReadRegister(PCReg);
+   	machine->WriteRegister(PrevPCReg, counter);
+    	counter = machine->ReadRegister(NextPCReg);
+    	machine->WriteRegister(PCReg, counter);
+   	machine->WriteRegister(NextPCReg, counter + 4);
 }
-void
-ExceptionHandler(ExceptionType which)
+void ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
     switch (which)
@@ -97,49 +99,49 @@ ExceptionHandler(ExceptionType which)
     case PageFaultException:
     {
         DEBUG('a', "\n No valid translation found");
-        printf("\n No valid translation found");
+        printf("\n\n No valid translation found");
         interrupt->Halt();
         return;
     }
     case ReadOnlyException:
     {
         DEBUG('a', "\n Write attempted to page marked read-only");
-        printf("\n Write attempted to page marked read-only");
+        printf("\n\n Write attempted to page marked read-only");
         interrupt->Halt();
         return;
     }
     case BusErrorException:
     {
         DEBUG('a', "\n Translation resulted in an invalid physical address");
-        printf("\n Translation resulted in an invalid physical address");
+        printf("\n\n Translation resulted in an invalid physical address");
         interrupt->Halt();
         return;
     }
     case AddressErrorException:
     {
         DEBUG('a', "\n Unaligned reference or one that was beyond the end of the address space");
-        printf("\n Unaligned reference or one that was beyond the end of the address space");
+        printf("\n\n Unaligned reference or one that was beyond the end of the address space");
         interrupt->Halt();
         return;
     }
     case OverflowException:
     {
         DEBUG('a', "\n Integer overflow in add or sub.");
-        printf("\n Integer overflow in add or sub.");
+        printf("\n\n Integer overflow in add or sub.");
         interrupt->Halt();
         return;
     }   
     case IllegalInstrException:
     {
         DEBUG('a', "\n Unimplemented or reserved instr.");
-        printf("\n Unimplemented or reserved instr.");
+        printf("\n\n Unimplemented or reserved instr.");
         interrupt->Halt();
         return;
     }
     case NumExceptionTypes:
     {
         DEBUG('a', "\n Number exception types.");
-        printf("\n Number exception types.");
+        printf("\n\n Number exception types.");
         interrupt->Halt();
         return;
     }
@@ -149,8 +151,8 @@ ExceptionHandler(ExceptionType which)
         {
         case SC_Halt:
         {
-            DEBUG('a', "\nShutdown, initiated by user program.\n");
-            printf("\nShutdown, initiated by user program.\n");
+            DEBUG('a', "\n Shutdown, initiated by user program.\n");
+            printf("\n\n Shutdown, initiated by user program.\n");
             interrupt->Halt();
             break;
         }
@@ -170,7 +172,7 @@ ExceptionHandler(ExceptionType which)
             for(int i = 0; i < len; i++){
                 if(buff[i] < '0' || buff[i] > '9'){
                     DEBUG('a', "\nInvalid number");
-                    printf("\nInvalid number");
+                    printf("\n\n Invalid number");
                     delete buff;
                     machine->WriteRegister(2, 0);//tra ve 0
                     increasePC();
@@ -226,68 +228,16 @@ ExceptionHandler(ExceptionType which)
         {
             
         }
-        case SC_Exit:
+        case SC_PrintChar:
         {
-            int exitStatus = machine->ReadRegister(4);
-            printf("\n Exit status: %d", exitStatus);
-            currentThread->Finish();
-            break;
+            
         }
-        case SC_Exec:
+        case SC_ReadString:
         {
-            int fileNameAddr = machine->ReadRegister(4);
-            char *fileName = new char[100];
-            int i = 0;
-            do
-            {
-                machine->ReadMem(fileNameAddr + i, 1, (int *)(fileName + i));
-            } while (fileName[i++] != '\0');
-            OpenFile *executable = fileSystem->Open(fileName);
-            AddrSpace *space;
-            if (executable == NULL)
-            {
-                printf("\n Unable to open file %s", fileName);
-                machine->WriteRegister(2, -1);
-                delete executable;
-                break;
-            }
-            space = new AddrSpace(executable);
-            Thread *thread = new Thread(fileName);
-            thread->space = space;
-            thread->Fork(StartProcess, (int)thread);
-            machine->WriteRegister(2, thread->getPid());
-            delete executable;
-            break;
         }
-        case SC_Join:
+        case SC_PrintString:
         {
-            int pid = machine->ReadRegister(4);
-            Thread *thread = getThreadFromPid(pid);
-            if (thread == NULL)
-            {
-                printf("\n No thread with pid %d", pid);
-                machine->WriteRegister(2, -1);
-                break;
-            }
-            thread->Join();
-            machine->WriteRegister(2, thread->getExitStatus());
-            break;
-        }
-        case SC_Create:
-        {
-            int fileNameAddr = machine->ReadRegister(4);
-            char *fileName = new char[100];
-            int i = 0;
-            do
-            {
-                machine->ReadMem(fileNameAddr + i, 1, (int *)(fileName + i));
-            } while (fileName[i++] != '\0');
-            if (fileSystem->Create(fileName, 0))
-            {
-                printf("\n File %s created", fileName);
-                machine->WriteRegister(2, 0);
-            }
-        }
-    }    
+        }    
+    }
     }
 } 
